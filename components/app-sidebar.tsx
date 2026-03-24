@@ -43,8 +43,8 @@ export function AppSidebar() {
                   <ShieldAlert className="size-4" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">TenderRisk</span>
-                  <span className="text-xs text-muted-foreground">Analysis System</span>
+                  <span className="font-semibold">Tenrixa</span>
+                  <span className="text-xs text-muted-foreground">Tender Risk Analysis</span>
                 </div>
               </Link>
             </SidebarMenuButton>

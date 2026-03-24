@@ -9,7 +9,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'TenderRisk - Tender Risk Analysis System',
+  title: 'Tenrixa - Tender Risk Analysis System',
   description: 'Analyze and assess risks associated with tenders and bids. Evaluate financial and legal compliance risks with interactive scoring matrices.',
   generator: 'v0.app',
   icons: {
