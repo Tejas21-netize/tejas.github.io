@@ -1,15 +1,49 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { FilePlus } from "lucide-react"
+import { FilePlus, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DashboardCards } from "@/components/dashboard-cards"
 import { RiskDistributionChart, CategoryBreakdownChart } from "@/components/risk-charts"
 import { RecentAnalyses } from "@/components/recent-analyses"
-import { useTenderStore } from "@/lib/store"
+import { getTenders } from "@/lib/supabase-operations"
+import { useUser } from "@/hooks/use-user"
+import type { Tender } from "@/lib/types"
 
 export default function DashboardPage() {
-  const { tenders } = useTenderStore()
+  const { user, loading: userLoading } = useUser()
+  const [tenders, setTenders] = useState<Tender[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!userLoading && user) {
+      loadTenders()
+    } else if (!userLoading && !user) {
+      setLoading(false)
+    }
+  }, [user, userLoading])
+
+  const loadTenders = async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const data = await getTenders(user.id)
+      setTenders(data)
+    } catch (error) {
+      console.error('Error loading tenders:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (userLoading || loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">

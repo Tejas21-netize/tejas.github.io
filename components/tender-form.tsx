@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
-import { CalendarIcon, ChevronLeft, ChevronRight, Check } from "lucide-react"
+import { CalendarIcon, ChevronLeft, ChevronRight, Check, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -26,7 +26,8 @@ import { Calendar } from "@/components/ui/calendar"
 import { Separator } from "@/components/ui/separator"
 import { RiskSlider, RiskScoreDisplay } from "@/components/risk-slider"
 import { RiskBadge } from "@/components/risk-badge"
-import { useTenderStore } from "@/lib/store"
+import { useUser } from "@/hooks/use-user"
+import { createTender } from "@/lib/supabase-operations"
 import {
   FINANCIAL_RISK_FACTORS,
   LEGAL_RISK_FACTORS,
@@ -55,8 +56,9 @@ function createDefaultRiskState(): RiskFactorState {
 
 export function TenderForm() {
   const router = useRouter()
-  const { addTender } = useTenderStore()
+  const { user } = useUser()
   const [step, setStep] = useState(0)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Step 1: Tender details
   const [name, setName] = useState("")
@@ -149,29 +151,51 @@ export function TenderForm() {
     return risks
   }
 
-  const handleSubmit = () => {
-    const risks = buildRiskAssessments()
-    const overallScore = computeOverallScore(risks)
-
-    const tender: Tender = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      organization: organization.trim(),
-      value: parseFloat(value),
-      currency,
-      deadline: deadline!.toISOString(),
-      description: description.trim(),
-      status: "analyzed",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      risks,
-      overallScore,
-      overallLevel: getOverallLevel(overallScore),
+  const handleSubmit = async () => {
+    if (!user) {
+      toast.error("Not authenticated")
+      return
     }
 
-    addTender(tender)
-    toast.success("Tender analysis created successfully")
-    router.push(`/tenders/${tender.id}`)
+    setIsSubmitting(true)
+    try {
+      const risks = buildRiskAssessments()
+      const overallScore = computeOverallScore(risks)
+
+      const tender: Tender = {
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        organization: organization.trim(),
+        value: parseFloat(value),
+        deadline: deadline!,
+        financialRisks: Object.fromEntries(
+          Object.entries(financialRisks).map(([key, val]) => [
+            key,
+            { likelihood: val.likelihood, impact: val.impact },
+          ])
+        ),
+        legalRisks: Object.fromEntries(
+          Object.entries(legalRisks).map(([key, val]) => [
+            key,
+            { likelihood: val.likelihood, impact: val.impact },
+          ])
+        ),
+        createdAt: new Date(),
+      }
+
+      const result = await createTender(user.id, tender)
+      if (result) {
+        toast.success("Tender analysis created successfully")
+        router.push(`/tenders/${result.id}`)
+      } else {
+        toast.error("Failed to create tender")
+      }
+    } catch (error) {
+      console.error("Error submitting tender:", error)
+      toast.error("An error occurred while creating the tender")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const risks = buildRiskAssessments()
@@ -528,9 +552,18 @@ export function TenderForm() {
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         ) : (
-          <Button onClick={handleSubmit} disabled={!canGoNext()}>
-            <Check className="mr-2 h-4 w-4" />
-            Submit Analysis
+          <Button onClick={handleSubmit} disabled={!canGoNext() || isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Check className="mr-2 h-4 w-4" />
+                Submit Analysis
+              </>
+            )}
           </Button>
         )}
       </div>
