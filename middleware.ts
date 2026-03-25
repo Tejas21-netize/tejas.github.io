@@ -1,19 +1,8 @@
 import { updateSession } from '@/lib/supabase/proxy'
 import { type NextRequest } from 'next/server'
-import { NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const res = await updateSession(request)
-  
-  // Protect (app) routes - redirect to login if not authenticated
-  if (request.nextUrl.pathname.startsWith('/(app)') || request.nextUrl.pathname === '/') {
-    const user = res.headers.get('user')
-    if (!user) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
-    }
-  }
-  
-  return res
+  return await updateSession(request)
 }
 
 export const config = {
